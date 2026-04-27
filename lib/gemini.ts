@@ -29,6 +29,32 @@ function getModel(temperature = 0.15) {
   });
 }
 
+// Retry wrapper — handles 429 quota errors with exponential backoff
+async function generateWithRetry(
+  model: ReturnType<typeof getModel>,
+  prompt: string | (string | object)[],
+  maxRetries = 4
+): Promise<string> {
+  let delay = 8000; // start at 8s
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await model.generateContent(prompt as string);
+      return result.response.text();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isQuota = msg.includes("429") || msg.includes("quota") || msg.includes("Many Requests");
+      if (isQuota && attempt < maxRetries) {
+        console.warn(`[Gemini] Rate limit hit — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise((r) => setTimeout(r, delay));
+        delay *= 2; // exponential backoff: 8s → 16s → 32s → 64s
+      } else {
+        throw err;
+      }
+    }
+  }
+  throw new Error("Gemini quota exceeded after all retries. Please wait a minute and try again.");
+}
+
 // ─── Government Records Database (simulated) ──────────────────────────────────
 const GOV_RECORDS = [
   {
@@ -235,8 +261,8 @@ export async function analyzeEvidence(
   const s1Start = Date.now();
   stages.push({ stage: 1, name: "Claim Extraction", status: "processing" });
 
-  const claimResult = await model.generateContent(STAGE1_PROMPT + fullEvidence);
-  const claimsRaw = claimResult.response.text();
+  const claimResult = await generateWithRetry(model, STAGE1_PROMPT + fullEvidence);
+  const claimsRaw = claimResult;
 
   const claimsParsed = parseJSON<{ claims: ExtractedClaim[] }>(claimsRaw, { claims: [] });
   let claims: ExtractedClaim[] = (claimsParsed.claims || []).map((c, i) => ({
@@ -280,8 +306,9 @@ export async function analyzeEvidence(
     .replace("{CLAIMS}", claimsStr)
     .replace("{WITNESS_DATA}", witnessStr);
 
-  const contradictionResult = await model.generateContent(s2Prompt);
-  const contraRaw = contradictionResult.response.text();
+  await new Promise((r) => setTimeout(r, 2000)); // brief pause between stages
+  const contradictionResult = await generateWithRetry(model, s2Prompt);
+  const contraRaw = contradictionResult;
   const contraParsed = parseJSON<{ contradictions: Contradiction[] }>(contraRaw, { contradictions: [] });
 
   const contradictions: Contradiction[] = (contraParsed.contradictions || []).map((c, i) => ({
@@ -312,8 +339,9 @@ export async function analyzeEvidence(
     .replace("{CLAIMS_SUMMARY}", claimsStr)
     .replace("{WITNESS_SUMMARY}", witnessStr);
 
-  const reportResult = await model.generateContent(s3Prompt);
-  const reportRaw = reportResult.response.text();
+  await new Promise((r) => setTimeout(r, 2000)); // brief pause between stages
+  const reportResult = await generateWithRetry(model, s3Prompt);
+  const reportRaw = reportResult;
   const reportParsed = parseJSON<{
     summary: string; verdict: string; overallConfidence: number;
     riskScore: number; contradictionScore: number; recommendation: string; legalNotice: string;
@@ -367,11 +395,11 @@ ${contextText ? `Context from submitter: ${contextText}` : ""}
 
 Provide a precise forensic description (3-5 paragraphs) for use in automated claim extraction. Be factual and specific.`;
 
-  const result = await model.generateContent([
+  const result = await generateWithRetry(model, [
     prompt,
     { inlineData: { data: base64Data, mimeType } },
-  ]);
-  return result.response.text();
+  ] as unknown as string);
+  return result;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
