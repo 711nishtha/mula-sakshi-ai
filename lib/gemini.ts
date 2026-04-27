@@ -12,7 +12,7 @@ import { WITNESS_DATASET, computeWitnessConsensus } from "@/data/witnesses";
 
 // ─── SDK Init ──────────────────────────────────────────────────────────────────
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const MODEL = "gemini-2.0-flash";
+const MODEL = "gemini-1.5-pro";
 
 const safetySettings = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -29,13 +29,13 @@ function getModel(temperature = 0.15) {
   });
 }
 
-// Retry wrapper — handles 429 quota errors with exponential backoff
+// Retry wrapper — max 2 retries, short delays, fails fast
 async function generateWithRetry(
   model: ReturnType<typeof getModel>,
   prompt: string | (string | object)[],
-  maxRetries = 4
+  maxRetries = 2
 ): Promise<string> {
-  let delay = 8000; // start at 8s
+  const delays = [3000, 6000];
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await model.generateContent(prompt as string);
@@ -44,15 +44,15 @@ async function generateWithRetry(
       const msg = err instanceof Error ? err.message : String(err);
       const isQuota = msg.includes("429") || msg.includes("quota") || msg.includes("Many Requests");
       if (isQuota && attempt < maxRetries) {
-        console.warn(`[Gemini] Rate limit hit — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise((r) => setTimeout(r, delay));
-        delay *= 2; // exponential backoff: 8s → 16s → 32s → 64s
+        const wait = delays[attempt] ?? 6000;
+        console.warn(`[Gemini] Rate limit — retrying in ${wait / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise((r) => setTimeout(r, wait));
       } else {
         throw err;
       }
     }
   }
-  throw new Error("Gemini quota exceeded after all retries. Please wait a minute and try again.");
+  throw new Error("Gemini quota exceeded. Please try again in a minute.");
 }
 
 // ─── Government Records Database (simulated) ──────────────────────────────────
@@ -306,7 +306,6 @@ export async function analyzeEvidence(
     .replace("{CLAIMS}", claimsStr)
     .replace("{WITNESS_DATA}", witnessStr);
 
-  await new Promise((r) => setTimeout(r, 2000)); // brief pause between stages
   const contradictionResult = await generateWithRetry(model, s2Prompt);
   const contraRaw = contradictionResult;
   const contraParsed = parseJSON<{ contradictions: Contradiction[] }>(contraRaw, { contradictions: [] });
@@ -339,7 +338,6 @@ export async function analyzeEvidence(
     .replace("{CLAIMS_SUMMARY}", claimsStr)
     .replace("{WITNESS_SUMMARY}", witnessStr);
 
-  await new Promise((r) => setTimeout(r, 2000)); // brief pause between stages
   const reportResult = await generateWithRetry(model, s3Prompt);
   const reportRaw = reportResult;
   const reportParsed = parseJSON<{
