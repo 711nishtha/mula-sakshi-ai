@@ -141,7 +141,7 @@ export default function SubmitClient() {
       await sleep(600);
 
       const analyzeData = await analyzeRes.json();
-      if (!analyzeRes.ok) throw new Error(analyzeData.error || "Analysis failed");
+      if (!analyzeRes.ok) throw new Error(analyzeData.details || analyzeData.error || "Analysis failed");
 
       advanceStage("complete");
       await sleep(800);
