@@ -334,7 +334,7 @@ export default function HomePage() {
           </span>
         </div>
         <div className="text-xs text-text-muted font-body text-center">
-          Google Solution Challenge 2026 · Built with Gemini 1.5 Pro · Firebase · Next.js
+          Google Solution Challenge 2026 · Built with Gemini 1.5 Pro · Next.js
         </div>
         <div className="flex items-center gap-1.5 text-xs text-text-muted font-body">
           <Lock size={10} />
