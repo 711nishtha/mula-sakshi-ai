@@ -67,7 +67,7 @@ export const DEMO_REPORT: AuditReport = {
     {
       id: "C3", type: "date", entity: "Stamp Duty Receipt",
       event: "Stamp duty payment for land transaction",
-      quantity: null, location: null,
+      quantity: undefined, location: undefined,
       content: "Stamp duty paid in 2019 for 2.1 acres — predates alleged expansion",
       confidence: 0.90, sourceQuote: "Stamp duty was paid in 2019 for 2.1 acres",
       timestamp: new Date().toISOString(),
