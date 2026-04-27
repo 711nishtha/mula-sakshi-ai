@@ -1,0 +1,33 @@
+# render.yaml — Render deployment config
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: mula-sakshi
+    runtime: node
+    region: singapore   # change to your preferred region
+    plan: free          # upgrade to starter+ for persistent disk
+
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false        # set manually in Render dashboard
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false        # e.g. https://mula-sakshi.onrender.com
+
+    # ── Optional: add a persistent disk so submissions survive deploys ──────
+    # Uncomment the block below, then set DATA_DIR=/data in envVars.
+    # Requires Starter plan or higher.
+    #
+    # disk:
+    #   name: mula-sakshi-data
+    #   mountPath: /data
+    #   sizeGB: 1
+    #
+    # Then add to envVars:
+    #   - key: DATA_DIR
+    #     value: /data
