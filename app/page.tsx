@@ -11,7 +11,7 @@ const TAGLINE_WORDS = ["Contradictions.", "Discrepancies.", "Fabrications.", "An
 const STATS = [
   { value: "3", suffix: "-Stage", label: "Gemini AI Pipeline" },
   { value: "70", suffix: "+", label: "Synthetic Witnesses" },
-  { value: "100", suffix: "%", label: "Google Stack" },
+  { value: "2.5", suffix: " Pro", label: "Gemini Model" },
   { value: "0", suffix: "-Trust", label: "Verification Model" },
 ];
 
@@ -27,7 +27,7 @@ const HOW_IT_WORKS = [
     step: "02",
     icon: Zap,
     title: "3-Stage AI Analysis",
-    description: "Gemini 1.5 Pro runs claim extraction, cross-references against government records, then generates a legal verdict.",
+    description: "Gemini 2.5 Pro runs claim extraction, cross-references against government records, then generates a legal verdict.",
     color: "#D4A853",
   },
   {
@@ -334,7 +334,7 @@ export default function HomePage() {
           </span>
         </div>
         <div className="text-xs text-text-muted font-body text-center">
-          Google Solution Challenge 2026 · Built with Gemini 1.5 Pro · Next.js
+          Google Solution Challenge 2026 · Built with Gemini 2.5 Pro · Next.js
         </div>
         <div className="flex items-center gap-1.5 text-xs text-text-muted font-body">
           <Lock size={10} />
