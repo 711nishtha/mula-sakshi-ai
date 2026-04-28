@@ -187,3 +187,14 @@ body {
   background: rgba(212, 168, 83, 0.1);
   border: 1px solid rgba(212, 168, 83, 0.4);
 }
+
+
+/* ─── Print / PDF stylesheet ─────────────────────────────────────────────── */
+@media print {
+  nav, button, .no-print { display: none !important; }
+  body { background: #ffffff !important; color: #000000 !important; }
+  .bg-obsidian { background: #ffffff !important; }
+  * { color: #000 !important; border-color: #ccc !important; background: transparent !important; }
+  .font-mono { font-family: monospace; }
+  .pt-24 { padding-top: 1rem !important; }
+}
