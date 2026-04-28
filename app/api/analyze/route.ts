@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeEvidence, analyzeMedia } from "@/lib/gemini";
 import { getDb } from "@/lib/db";
 import { DEMO_REPORT } from "@/lib/demoData";
+import type { AuditReport } from "@/types";
 
 export const runtime = "nodejs";
 
 function isQuotaError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return msg.includes("429") || msg.includes("quota") || msg.includes("Many Requests") || msg.includes("all retries");
+  return msg.includes("QUOTA_EXCEEDED") || msg.includes("429") || msg.includes("Many Requests");
 }
 
 export async function POST(request: NextRequest) {
@@ -23,19 +24,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "evidenceText is required" }, { status: 400 });
     }
 
-    // Explicit demo mode: return pre-built report immediately
+    // Explicit demo mode
     if (demoMode === true) {
+      const report = { ...DEMO_REPORT, caseId: submissionId ?? DEMO_REPORT.caseId };
       if (submissionId) {
         try {
           const db = await getDb();
           await db.updateSubmission(submissionId, {
-            status: "complete",
-            report: DEMO_REPORT,
-            completedAt: new Date().toISOString(),
+            status: "complete", report, completedAt: new Date().toISOString(),
           });
         } catch { /* no-op */ }
       }
-      return NextResponse.json({ success: true, report: DEMO_REPORT, submissionId, demo: true });
+      return NextResponse.json({ success: true, report, submissionId, demo: true });
     }
 
     // Mark as processing
@@ -43,46 +43,48 @@ export async function POST(request: NextRequest) {
       try {
         const db = await getDb();
         await db.updateSubmission(submissionId, {
-          status: "processing",
-          processingStartedAt: new Date().toISOString(),
+          status: "processing", processingStartedAt: new Date().toISOString(),
         });
       } catch { /* no-op */ }
     }
 
-    // Analyze media if provided
+    // Optional media analysis
     let mediaDescription: string | undefined;
     if (mediaBase64 && mediaMimeType) {
       try {
         console.log(`[${submissionId}] Analyzing media (${mediaMimeType})…`);
         mediaDescription = await analyzeMedia(mediaBase64, mediaMimeType, evidenceText);
       } catch (mediaErr) {
-        // Media analysis failure is non-fatal — proceed without it
-        console.warn(`[${submissionId}] Media analysis failed, continuing without it:`, mediaErr);
+        console.warn(`[${submissionId}] Media analysis skipped:`, mediaErr);
       }
     }
 
-    // Run the 3-stage Gemini pipeline
-    let report;
+    // 3-stage pipeline
+    let report: AuditReport;
     let usedFallback = false;
 
     try {
-      console.log(`[${submissionId}] Starting 3-stage analysis…`);
+      console.log(`[${submissionId}] Starting 3-stage Gemini analysis…`);
       report = await analyzeEvidence(evidenceText, mediaDescription);
     } catch (geminiErr) {
       if (isQuotaError(geminiErr)) {
-        // Quota exhausted — return demo report silently so the UI still works
-        console.warn(`[${submissionId}] Quota exceeded — serving fallback report`);
-        report = { ...DEMO_REPORT, caseId: submissionId ?? DEMO_REPORT.caseId };
+        // Quota exceeded — serve demo report with a clear note
+        console.warn(`[${submissionId}] Quota exceeded — serving demo fallback`);
+        report = {
+          ...DEMO_REPORT,
+          caseId: submissionId ?? `MS-FALLBACK-${Date.now().toString(36).toUpperCase()}`,
+          timestamp: new Date().toISOString(),
+          summary: "⚠️ API quota temporarily exceeded. This is a sample report showing system capabilities. Please retry in a few minutes for analysis of your specific evidence.\n\n" + DEMO_REPORT.summary,
+        };
         usedFallback = true;
       } else {
-        throw geminiErr; // real error, let it bubble
+        throw geminiErr;
       }
     }
 
     const totalMs = Date.now() - startTime;
     console.log(`[${submissionId}] Done in ${totalMs}ms. Verdict: ${report.verdict}${usedFallback ? " (fallback)" : ""}`);
 
-    // Persist completed report
     if (submissionId) {
       try {
         const db = await getDb();
