@@ -143,7 +143,16 @@ export default function ReportPage() {
           <Shield size={14} className="text-gold" />
           <span className="text-xs font-mono text-text-muted">AUDIT REPORT</span>
         </div>
-        <button className="flex items-center gap-2 text-xs font-mono text-text-muted hover:text-text-secondary transition-colors">
+        <button
+          id="share-btn"
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+              const btn = document.getElementById("share-btn");
+              if (btn) { btn.textContent = "✓ Copied!"; setTimeout(() => { btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share'; }, 2000); }
+            });
+          }}
+          className="flex items-center gap-2 text-xs font-mono text-text-muted hover:text-text-secondary transition-colors"
+        >
           <Share2 size={13} />Share
         </button>
       </nav>
@@ -332,8 +341,10 @@ export default function ReportPage() {
                 className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gold text-obsidian font-bold rounded-xl text-sm hover:bg-gold-bright transition-all">
                 Submit New Evidence
               </Link>
-              <button className="w-full flex items-center justify-center gap-2 px-6 py-3.5 border border-border text-text-secondary rounded-xl text-sm hover:border-border-bright hover:text-text-primary transition-all">
-                <Download size={15} />Download Report
+              <button
+                onClick={() => window.print()}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 border border-border text-text-secondary rounded-xl text-sm hover:border-border-bright hover:text-text-primary transition-all">
+                <Download size={15} />Download Report (PDF)
               </button>
             </div>
           </div>
