@@ -5,7 +5,7 @@
 [![Google Solution Challenge 2026](https://img.shields.io/badge/Google%20Solution%20Challenge-2026-4285F4?style=flat-square&logo=google)](https://developers.google.com/community/gdsc-solution-challenge)
 [![Gemini 1.5 Pro](https://img.shields.io/badge/Gemini-1.5%20Pro-EA4335?style=flat-square&logo=google)](https://ai.google.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=flat-square&logo=render)](https://render.com/)
+[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=flat-square&logo=render)](https://mula-sakshi-ai.onrender.com/)
 
 ---
 
